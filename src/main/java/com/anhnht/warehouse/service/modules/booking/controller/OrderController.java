@@ -104,6 +104,31 @@ public class OrderController {
                 bookingMapper.toOrderResponse(orderService.updateStatus(id, request))));
     }
 
+    /**
+     * PUT /admin/orders/{id}/approve
+     * Approves a PENDING order → APPROVED.
+     */
+    @PutMapping("/admin/orders/{id}/approve")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATOR')")
+    public ResponseEntity<ApiResponse<OrderResponse>> approveOrder(@PathVariable Integer id) {
+        return ResponseEntity.ok(ApiResponse.success(
+                bookingMapper.toOrderResponse(orderService.approve(id))));
+    }
+
+    /**
+     * PUT /admin/orders/{id}/reject
+     * Rejects a PENDING order → REJECTED. Optional reason in body.
+     */
+    @PutMapping("/admin/orders/{id}/reject")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATOR')")
+    public ResponseEntity<ApiResponse<OrderResponse>> rejectOrder(
+            @PathVariable Integer id,
+            @RequestBody(required = false) OrderCancelRequest request) {
+        String reason = (request != null) ? request.getReason() : null;
+        return ResponseEntity.ok(ApiResponse.success(
+                bookingMapper.toOrderResponse(orderService.reject(id, reason))));
+    }
+
     @PostMapping("/admin/orders/{orderId}/containers/{containerId}")
     @PreAuthorize("hasAnyRole('ADMIN','OPERATOR')")
     public ResponseEntity<ApiResponse<OrderResponse>> addContainer(

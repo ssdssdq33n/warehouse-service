@@ -1,10 +1,12 @@
 package com.anhnht.warehouse.service.modules.lookup.controller;
 
+import com.anhnht.warehouse.service.common.constant.AppConstant;
 import com.anhnht.warehouse.service.common.dto.response.ApiResponse;
 import com.anhnht.warehouse.service.modules.container.dto.response.CargoTypeResponse;
 import com.anhnht.warehouse.service.modules.container.dto.response.ContainerTypeResponse;
 import com.anhnht.warehouse.service.modules.container.mapper.ContainerCatalogMapper;
 import com.anhnht.warehouse.service.modules.container.service.ContainerCatalogService;
+import com.anhnht.warehouse.service.modules.lookup.dto.FeeConfigResponse;
 import com.anhnht.warehouse.service.modules.vessel.dto.response.VoyageResponse;
 import com.anhnht.warehouse.service.modules.vessel.mapper.VesselMapper;
 import com.anhnht.warehouse.service.modules.vessel.service.VoyageService;
@@ -56,5 +58,19 @@ public class LookupController {
     public ResponseEntity<ApiResponse<List<YardTypeResponse>>> getYardTypes() {
         return ResponseEntity.ok(ApiResponse.success(
                 yardMapper.toYardTypeResponses(yardService.getAllYardTypes())));
+    }
+
+    @GetMapping("/fee-config")
+    public ResponseEntity<ApiResponse<FeeConfigResponse>> getFeeConfig() {
+        FeeConfigResponse config = FeeConfigResponse.builder()
+                .dailyStorageRate(AppConstant.STORAGE_DAILY_RATE)
+                .overdueStorageRate(AppConstant.STORAGE_OVERDUE_RATE)
+                .freeStorageDays(AppConstant.STORAGE_FREE_DAYS)
+                .deadlineWarnDays(AppConstant.DEADLINE_WARN_DAYS)
+                .deadlineUrgentDays(AppConstant.DEADLINE_URGENT_DAYS)
+                .zoneOccupancyWarnThreshold(AppConstant.OCC_WARN_THRESHOLD)
+                .zoneOccupancyCriticalThreshold(AppConstant.OCC_CRITICAL_THRESHOLD)
+                .build();
+        return ResponseEntity.ok(ApiResponse.success(config));
     }
 }

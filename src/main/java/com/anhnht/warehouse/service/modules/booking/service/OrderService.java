@@ -31,4 +31,18 @@ public interface OrderService {
 
     /** Admin removes a container from an order. */
     Order removeContainer(Integer orderId, String containerId);
+
+    /**
+     * Admin/Operator approves a PENDING order → APPROVED.
+     * Throws BusinessException if order is not in PENDING status.
+     */
+    Order approve(Integer orderId);
+
+    /**
+     * Admin/Operator rejects a PENDING order → REJECTED.
+     * Throws BusinessException if order is not in PENDING status.
+     *
+     * @param reason optional rejection reason stored in a cancellation record
+     */
+    Order reject(Integer orderId, String reason);
 }

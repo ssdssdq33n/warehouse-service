@@ -6,6 +6,8 @@ import com.anhnht.warehouse.service.modules.user.repository.SystemLogRepository;
 import com.anhnht.warehouse.service.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -39,5 +41,15 @@ public class SystemLogService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void log(String action, String description) {
         log(null, action, description);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SystemLog> findAll(Pageable pageable) {
+        return systemLogRepository.findAll(pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<SystemLog> findByUserId(Integer userId, Pageable pageable) {
+        return systemLogRepository.findAllByUserUserId(userId, pageable);
     }
 }

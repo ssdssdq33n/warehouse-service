@@ -109,18 +109,19 @@ public class DashboardServiceImpl implements DashboardService {
         long myPendingOrders    = orderRepository.countByCustomerUserIdAndStatusStatusName(userId, "PENDING");
         long myTotalOrders      = orderRepository.countByCustomerUserId(userId);
 
-        // Near-expiry: expected exit within DEADLINE_WARN_DAYS days, container still in yard
-        LocalDate cutoff = LocalDate.now().plusDays(AppConstant.DEADLINE_WARN_DAYS);
-        List<String> nearExpiryContainerIds = yardStorageRepository
-                .findWithExitOnOrBefore(cutoff)
-                .stream()
-                .filter(s -> {
-                    String status = s.getContainer().getStatus() != null
-                            ? s.getContainer().getStatus().getStatusName() : "";
-                    return "IN_YARD".equalsIgnoreCase(status) || "GATE_IN".equalsIgnoreCase(status);
-                })
-                .map(s -> s.getContainer().getContainerId())
-                .collect(Collectors.toList());
+        // Near-expiry: scoped to this customer's own in-yard containers only
+        List<String> myContainerIds = orderRepository.findContainerIdsInYardByCustomerId(userId);
+        List<String> nearExpiryContainerIds;
+        if (myContainerIds.isEmpty()) {
+            nearExpiryContainerIds = List.of();
+        } else {
+            LocalDate cutoff = LocalDate.now().plusDays(AppConstant.DEADLINE_WARN_DAYS);
+            nearExpiryContainerIds = yardStorageRepository
+                    .findWithExitOnOrBeforeForContainers(cutoff, myContainerIds)
+                    .stream()
+                    .map(s -> s.getContainer().getContainerId())
+                    .collect(Collectors.toList());
+        }
 
         return CustomerDashboardResponse.builder()
                 .myContainersInYard(myContainersInYard)

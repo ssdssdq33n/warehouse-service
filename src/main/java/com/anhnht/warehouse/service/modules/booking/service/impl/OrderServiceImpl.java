@@ -29,6 +29,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class OrderServiceImpl implements OrderService {
 
     private static final String STATUS_PENDING    = "PENDING";
+    private static final String STATUS_APPROVED   = "APPROVED";
+    private static final String STATUS_REJECTED   = "REJECTED";
     private static final String STATUS_CANCELLED  = "CANCELLED";
 
     private final OrderRepository            orderRepository;
@@ -140,6 +142,42 @@ public class OrderServiceImpl implements OrderService {
         Order order = findById(orderId);
         order.getContainers().removeIf(c -> c.getContainerId().equals(containerId));
         return orderRepository.save(order);
+    }
+
+    @Override
+    @Transactional
+    public Order approve(Integer orderId) {
+        Order order = findById(orderId);
+        String current = order.getStatus().getStatusName();
+        if (!STATUS_PENDING.equalsIgnoreCase(current)) {
+            throw new BusinessException(ErrorCode.BOOKING_ALREADY_PROCESSED,
+                    "Only PENDING orders can be approved. Current status: " + current);
+        }
+        order.setStatus(resolveStatus(STATUS_APPROVED));
+        return orderRepository.save(order);
+    }
+
+    @Override
+    @Transactional
+    public Order reject(Integer orderId, String reason) {
+        Order order = findById(orderId);
+        String current = order.getStatus().getStatusName();
+        if (!STATUS_PENDING.equalsIgnoreCase(current)) {
+            throw new BusinessException(ErrorCode.BOOKING_ALREADY_PROCESSED,
+                    "Only PENDING orders can be rejected. Current status: " + current);
+        }
+        order.setStatus(resolveStatus(STATUS_REJECTED));
+        orderRepository.save(order);
+
+        // Record reason in cancellation table (reuses the same pattern as cancel)
+        if (reason != null && !reason.isBlank()) {
+            OrderCancellation record = new OrderCancellation();
+            record.setOrder(order);
+            record.setReason(reason);
+            cancellationRepository.save(record);
+        }
+
+        return order;
     }
 
     // ----------------------------------------------------------------

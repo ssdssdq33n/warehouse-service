@@ -7,6 +7,7 @@ import com.anhnht.warehouse.service.common.util.SecurityUtils;
 import com.anhnht.warehouse.service.modules.gateout.dto.request.GateOutRequest;
 import com.anhnht.warehouse.service.modules.gateout.dto.response.GateOutReceiptResponse;
 import com.anhnht.warehouse.service.modules.gateout.dto.response.StorageBillResponse;
+import com.anhnht.warehouse.service.modules.gateout.dto.response.StorageInvoiceResponse;
 import com.anhnht.warehouse.service.modules.gateout.mapper.GateOutMapper;
 import com.anhnht.warehouse.service.modules.gateout.service.GateOutService;
 import jakarta.validation.Valid;
@@ -57,6 +58,13 @@ public class GateOutController {
             @PathVariable Integer id) {
         return ResponseEntity.ok(ApiResponse.success(
                 gateOutMapper.toResponse(gateOutService.findById(id))));
+    }
+
+    @GetMapping("/gate-out/{id}/invoice")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATOR')")
+    public ResponseEntity<ApiResponse<StorageInvoiceResponse>> getInvoice(
+            @PathVariable Integer id) {
+        return ResponseEntity.ok(ApiResponse.success(gateOutService.getInvoice(id)));
     }
 
     // ============================================================

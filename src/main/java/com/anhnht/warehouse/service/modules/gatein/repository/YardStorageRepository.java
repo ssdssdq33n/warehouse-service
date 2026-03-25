@@ -26,6 +26,20 @@ public interface YardStorageRepository extends JpaRepository<YardStorage, Intege
     @Query("SELECT s FROM YardStorage s WHERE s.storageEndDate IS NOT NULL AND s.storageEndDate <= :cutoff")
     List<YardStorage> findWithExitOnOrBefore(@Param("cutoff") LocalDate cutoff);
 
+    /**
+     * Customer dashboard: near-expiry records scoped to a specific set of container IDs.
+     * Returns storage records whose expected exit date is on or before cutoff AND
+     * whose container ID is in the provided list.
+     */
+    @EntityGraph(attributePaths = {"container", "container.status"})
+    @Query("SELECT s FROM YardStorage s " +
+           "WHERE s.storageEndDate IS NOT NULL " +
+           "  AND s.storageEndDate <= :cutoff " +
+           "  AND s.container.containerId IN :containerIds")
+    List<YardStorage> findWithExitOnOrBeforeForContainers(
+            @Param("cutoff") LocalDate cutoff,
+            @Param("containerIds") List<String> containerIds);
+
     /** Algorithm: expected exit date for a container (earliest non-null end date). */
     @Query("SELECT s.storageEndDate FROM YardStorage s " +
            "WHERE s.container.containerId = :containerId AND s.storageEndDate IS NOT NULL " +
