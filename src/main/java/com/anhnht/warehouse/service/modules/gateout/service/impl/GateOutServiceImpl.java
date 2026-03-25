@@ -1,0 +1,153 @@
+package com.anhnht.warehouse.service.modules.gateout.service.impl;
+
+import com.anhnht.warehouse.service.common.constant.AppConstant;
+import com.anhnht.warehouse.service.common.constant.ErrorCode;
+import com.anhnht.warehouse.service.common.exception.BusinessException;
+import com.anhnht.warehouse.service.common.exception.ResourceNotFoundException;
+import com.anhnht.warehouse.service.modules.container.entity.Container;
+import com.anhnht.warehouse.service.modules.container.service.ContainerService;
+import com.anhnht.warehouse.service.modules.gatein.entity.YardStorage;
+import com.anhnht.warehouse.service.modules.gatein.repository.ContainerPositionRepository;
+import com.anhnht.warehouse.service.modules.gatein.repository.YardStorageRepository;
+import com.anhnht.warehouse.service.modules.gateout.dto.request.GateOutRequest;
+import com.anhnht.warehouse.service.modules.gateout.dto.response.StorageBillResponse;
+import com.anhnht.warehouse.service.modules.gateout.entity.GateOutReceipt;
+import com.anhnht.warehouse.service.modules.gateout.repository.GateOutReceiptRepository;
+import com.anhnht.warehouse.service.modules.gateout.service.GateOutService;
+import com.anhnht.warehouse.service.modules.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.Set;
+
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class GateOutServiceImpl implements GateOutService {
+
+    /** Container statuses that allow gate-out. */
+    private static final Set<String> ELIGIBLE_STATUSES = Set.of("IN_YARD", "GATE_IN");
+    private static final String      STATUS_GATE_OUT    = "GATE_OUT";
+
+    private final GateOutReceiptRepository   receiptRepository;
+    private final ContainerPositionRepository positionRepository;
+    private final YardStorageRepository      storageRepository;
+    private final ContainerService           containerService;
+    private final UserRepository             userRepository;
+
+    @Override
+    @Transactional
+    public GateOutReceipt processGateOut(Integer operatorId, GateOutRequest request) {
+        String containerId = request.getContainerId();
+
+        // Prevent duplicate gate-out
+        if (receiptRepository.existsByContainerContainerId(containerId)) {
+            throw new BusinessException(ErrorCode.CONTAINER_ALREADY_EXPORTED,
+                    "Container already has a gate-out record: " + containerId);
+        }
+
+        Container container = containerService.findById(containerId);
+
+        // Validate container is in an eligible status
+        String currentStatus = container.getStatus() != null
+                ? container.getStatus().getStatusName() : "";
+        if (!ELIGIBLE_STATUSES.contains(currentStatus)) {
+            throw new BusinessException(ErrorCode.CONTAINER_NOT_IN_YARD,
+                    "Container is not in yard. Current status: " + currentStatus);
+        }
+
+        // 1. Create gate-out receipt
+        GateOutReceipt receipt = new GateOutReceipt();
+        receipt.setContainer(container);
+        receipt.setNote(request.getNote());
+        if (operatorId != null) {
+            userRepository.findById(operatorId).ifPresent(receipt::setCreatedBy);
+        }
+        GateOutReceipt saved = receiptRepository.save(receipt);
+
+        // 2. Remove container position (slot is now free)
+        // Note: yard_storage.storage_end_date holds the EXPECTED exit date set at gate-in; not modified here.
+        positionRepository.findByContainerContainerId(containerId)
+                .ifPresent(positionRepository::delete);
+
+        // 4. Update container status → GATE_OUT
+        containerService.changeStatus(containerId, STATUS_GATE_OUT,
+                "Container passed gate-out");
+
+        return saved;
+    }
+
+    @Override
+    public Page<GateOutReceipt> findAll(Pageable pageable) {
+        return receiptRepository.findAllPaged(pageable);
+    }
+
+    @Override
+    public GateOutReceipt findById(Integer gateOutId) {
+        return receiptRepository.findByIdWithDetails(gateOutId)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.NOT_FOUND,
+                        "Gate-out receipt not found: " + gateOutId));
+    }
+
+    @Override
+    public StorageBillResponse computeStorageBill(String containerId) {
+        containerService.findById(containerId); // validate existence
+
+        // Get the most recent storage record (or active one)
+        List<YardStorage> records = storageRepository.findByContainerIdOrdered(containerId);
+        if (records.isEmpty()) {
+            throw new ResourceNotFoundException(ErrorCode.NOT_FOUND,
+                    "No storage record found for container: " + containerId);
+        }
+
+        YardStorage latest      = records.get(0);
+        LocalDate   startDate   = latest.getStorageStartDate();
+        LocalDate   endDate     = latest.getStorageEndDate();
+        LocalDate   today       = LocalDate.now();
+        LocalDate   billToDate  = (endDate != null) ? endDate : today;
+
+        long totalDays  = Math.max(ChronoUnit.DAYS.between(startDate, billToDate), 1L);
+        long billDays   = Math.max(totalDays - AppConstant.STORAGE_FREE_DAYS, 0L);
+
+        BigDecimal dailyRate  = BigDecimal.valueOf(AppConstant.STORAGE_DAILY_RATE);
+        BigDecimal baseFee    = dailyRate.multiply(BigDecimal.valueOf(billDays))
+                                         .setScale(2, RoundingMode.HALF_UP);
+
+        // Overdue penalty: if storage_end_date was set but container still hasn't left
+        boolean isOverdue   = false;
+        long    overdueDays = 0L;
+        BigDecimal penalty  = BigDecimal.ZERO;
+
+        if (endDate != null && today.isAfter(endDate) && latest.getStorageEndDate() == null) {
+            isOverdue   = true;
+            overdueDays = ChronoUnit.DAYS.between(endDate, today);
+            penalty     = BigDecimal.valueOf(AppConstant.STORAGE_OVERDUE_RATE)
+                                    .multiply(BigDecimal.valueOf(overdueDays))
+                                    .setScale(2, RoundingMode.HALF_UP);
+        }
+
+        BigDecimal total = baseFee.add(penalty);
+
+        return StorageBillResponse.builder()
+                .containerId(containerId)
+                .yardName(latest.getYard() != null ? latest.getYard().getYardName() : null)
+                .storageStartDate(startDate)
+                .storageEndDate(latest.getStorageEndDate())
+                .storageDays(totalDays)
+                .dailyRate(dailyRate)
+                .baseFee(baseFee)
+                .overduePenalty(penalty)
+                .totalFee(total)
+                .isOverdue(isOverdue)
+                .overdueDays(overdueDays)
+                .build();
+    }
+}
