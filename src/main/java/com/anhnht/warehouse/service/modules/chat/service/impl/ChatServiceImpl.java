@@ -15,6 +15,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -25,6 +27,11 @@ public class ChatServiceImpl implements ChatService {
     private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final MessageRepository        messageRepository;
     private final UserRepository           userRepository;
+
+    @Override
+    public List<ChatRoomType> getRoomTypes() {
+        return chatRoomTypeRepository.findAll();
+    }
 
     @Override
     @Transactional

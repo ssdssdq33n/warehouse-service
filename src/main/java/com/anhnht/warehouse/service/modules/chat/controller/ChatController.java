@@ -6,6 +6,7 @@ import com.anhnht.warehouse.service.common.util.SecurityUtils;
 import com.anhnht.warehouse.service.modules.chat.dto.request.CreateRoomRequest;
 import com.anhnht.warehouse.service.modules.chat.dto.request.SendMessageRequest;
 import com.anhnht.warehouse.service.modules.chat.dto.response.ChatRoomResponse;
+import com.anhnht.warehouse.service.modules.chat.dto.response.ChatRoomTypeResponse;
 import com.anhnht.warehouse.service.modules.chat.dto.response.MessageResponse;
 import com.anhnht.warehouse.service.modules.chat.mapper.ChatMapper;
 import com.anhnht.warehouse.service.modules.chat.service.ChatService;
@@ -17,6 +18,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.stream.Collectors;
+
 @RestController
 @RequiredArgsConstructor
 @PreAuthorize("isAuthenticated()")
@@ -24,6 +28,19 @@ public class ChatController {
 
     private final ChatService chatService;
     private final ChatMapper  chatMapper;
+
+    /**
+     * GET /chat/room-types
+     * List all available chat room types.
+     */
+    @GetMapping("/chat/room-types")
+    public ResponseEntity<ApiResponse<List<ChatRoomTypeResponse>>> getRoomTypes() {
+        List<ChatRoomTypeResponse> types = chatService.getRoomTypes()
+                .stream()
+                .map(t -> new ChatRoomTypeResponse(t.getTypeId(), t.getTypeName()))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(ApiResponse.success(types));
+    }
 
     /**
      * POST /chat/rooms

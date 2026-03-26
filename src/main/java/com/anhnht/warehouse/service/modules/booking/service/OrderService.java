@@ -3,6 +3,7 @@ package com.anhnht.warehouse.service.modules.booking.service;
 import com.anhnht.warehouse.service.modules.booking.dto.request.OrderCancelRequest;
 import com.anhnht.warehouse.service.modules.booking.dto.request.OrderRequest;
 import com.anhnht.warehouse.service.modules.booking.dto.request.OrderStatusUpdateRequest;
+import com.anhnht.warehouse.service.modules.booking.dto.request.OrderUpdateRequest;
 import com.anhnht.warehouse.service.modules.booking.entity.Order;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,6 +20,9 @@ public interface OrderService {
 
     /** Customer creates a new booking (status = PENDING). */
     Order create(Integer customerId, OrderRequest request);
+
+    /** Customer or Admin edits contact fields on a PENDING order. */
+    Order update(Integer orderId, OrderUpdateRequest request);
 
     /** Admin/Operator updates order status. */
     Order updateStatus(Integer orderId, OrderStatusUpdateRequest request);

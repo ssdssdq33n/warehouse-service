@@ -7,6 +7,7 @@ import com.anhnht.warehouse.service.common.util.SecurityUtils;
 import com.anhnht.warehouse.service.modules.booking.dto.request.OrderCancelRequest;
 import com.anhnht.warehouse.service.modules.booking.dto.request.OrderRequest;
 import com.anhnht.warehouse.service.modules.booking.dto.request.OrderStatusUpdateRequest;
+import com.anhnht.warehouse.service.modules.booking.dto.request.OrderUpdateRequest;
 import com.anhnht.warehouse.service.modules.booking.dto.response.OrderResponse;
 import com.anhnht.warehouse.service.modules.booking.mapper.BookingMapper;
 import com.anhnht.warehouse.service.modules.booking.service.OrderService;
@@ -57,6 +58,15 @@ public class OrderController {
     public ResponseEntity<ApiResponse<OrderResponse>> getOrder(@PathVariable Integer id) {
         return ResponseEntity.ok(ApiResponse.success(
                 bookingMapper.toOrderResponse(orderService.findById(id))));
+    }
+
+    @PutMapping("/orders/{id}")
+    @PreAuthorize("hasAnyRole('CUSTOMER','ADMIN','OPERATOR')")
+    public ResponseEntity<ApiResponse<OrderResponse>> updateOrder(
+            @PathVariable Integer id,
+            @Valid @RequestBody OrderUpdateRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(
+                bookingMapper.toOrderResponse(orderService.update(id, request))));
     }
 
     @PutMapping("/orders/{id}/cancel")

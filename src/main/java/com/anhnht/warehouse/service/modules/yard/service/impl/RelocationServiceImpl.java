@@ -6,7 +6,9 @@ import com.anhnht.warehouse.service.common.exception.ResourceNotFoundException;
 import com.anhnht.warehouse.service.modules.gatein.entity.ContainerPosition;
 import com.anhnht.warehouse.service.modules.gatein.repository.ContainerPositionRepository;
 import com.anhnht.warehouse.service.modules.yard.dto.request.RelocationRequest;
+import com.anhnht.warehouse.service.modules.yard.dto.request.SwapRequest;
 import com.anhnht.warehouse.service.modules.yard.dto.response.RelocationResponse;
+import com.anhnht.warehouse.service.modules.yard.dto.response.SwapResponse;
 import com.anhnht.warehouse.service.modules.yard.entity.Slot;
 import com.anhnht.warehouse.service.modules.yard.repository.SlotRepository;
 import com.anhnht.warehouse.service.modules.yard.service.RelocationService;
@@ -71,6 +73,50 @@ public class RelocationServiceImpl implements RelocationService {
                 .toSlotId(targetSlotId)
                 .tier(targetTier)
                 .updatedAt(saved.getUpdatedAt())
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public SwapResponse swap(SwapRequest request) {
+        String idA = request.getContainerIdA();
+        String idB = request.getContainerIdB();
+
+        // Guard: containers must be different
+        if (idA.equalsIgnoreCase(idB)) {
+            throw new BusinessException(ErrorCode.BAD_REQUEST,
+                    "Cannot swap a container with itself");
+        }
+
+        // Validate both containers have active positions
+        ContainerPosition posA = positionRepository.findByContainerContainerId(idA)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.NOT_FOUND,
+                        "No active position found for container: " + idA));
+
+        ContainerPosition posB = positionRepository.findByContainerContainerId(idB)
+                .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.NOT_FOUND,
+                        "No active position found for container: " + idB));
+
+        // Capture A's current slot/tier before overwriting
+        Slot    slotA = posA.getSlot();
+        Integer tierA = posA.getTier();
+
+        // Swap: A gets B's position, B gets A's position
+        posA.setSlot(posB.getSlot());
+        posA.setTier(posB.getTier());
+        posB.setSlot(slotA);
+        posB.setTier(tierA);
+
+        positionRepository.save(posA);
+        positionRepository.save(posB);
+
+        return SwapResponse.builder()
+                .containerIdA(idA)
+                .containerANewSlotId(posA.getSlot().getSlotId())
+                .containerANewTier(posA.getTier())
+                .containerIdB(idB)
+                .containerBNewSlotId(posB.getSlot().getSlotId())
+                .containerBNewTier(posB.getTier())
                 .build();
     }
 }

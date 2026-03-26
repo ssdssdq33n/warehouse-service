@@ -6,6 +6,7 @@ import com.anhnht.warehouse.service.modules.dashboard.dto.response.ZoneOccupancy
 import com.anhnht.warehouse.service.modules.gatein.repository.ContainerPositionRepository;
 import com.anhnht.warehouse.service.modules.gatein.repository.GateInReceiptRepository;
 import com.anhnht.warehouse.service.modules.gateout.repository.GateOutReceiptRepository;
+import com.anhnht.warehouse.service.modules.gateout.repository.StorageInvoiceRepository;
 import com.anhnht.warehouse.service.modules.report.dto.response.*;
 import com.anhnht.warehouse.service.modules.report.service.ReportService;
 import com.anhnht.warehouse.service.modules.yard.repository.YardZoneRepository;
@@ -13,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -28,6 +30,7 @@ public class ReportServiceImpl implements ReportService {
 
     private final GateInReceiptRepository     gateInReceiptRepository;
     private final GateOutReceiptRepository    gateOutReceiptRepository;
+    private final StorageInvoiceRepository    invoiceRepository;
     private final ContainerRepository         containerRepository;
     private final OrderRepository             orderRepository;
     private final YardZoneRepository          yardZoneRepository;
@@ -126,6 +129,29 @@ public class ReportServiceImpl implements ReportService {
                 .totalOccupied(totalOccupied)
                 .overallOccupancyRate(overallRate)
                 .zones(zones)
+                .build();
+    }
+
+    @Override
+    public RevenueReportResponse getRevenueReport(LocalDate from, LocalDate to) {
+        LocalDateTime fromDt = from.atStartOfDay();
+        LocalDateTime toDt   = to.atTime(LocalTime.MAX);
+
+        Object[] totals  = invoiceRepository.aggregateByDateRange(fromDt, toDt);
+        Object[] overdue = invoiceRepository.aggregateOverdueByDateRange(fromDt, toDt);
+
+        long       totalInvoices   = ((Number) totals[0]).longValue();
+        BigDecimal totalAmount     = (BigDecimal) totals[1];
+        long       overdueInvoices = ((Number) overdue[0]).longValue();
+        BigDecimal overdueAmount   = (BigDecimal) overdue[1];
+
+        return RevenueReportResponse.builder()
+                .fromDate(from)
+                .toDate(to)
+                .totalInvoices(totalInvoices)
+                .totalAmount(totalAmount)
+                .overdueInvoices(overdueInvoices)
+                .overdueAmount(overdueAmount)
                 .build();
     }
 

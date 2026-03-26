@@ -4,6 +4,7 @@ import com.anhnht.warehouse.service.common.dto.response.ApiResponse;
 import com.anhnht.warehouse.service.modules.report.dto.response.ContainerInventoryResponse;
 import com.anhnht.warehouse.service.modules.report.dto.response.GateActivityReportResponse;
 import com.anhnht.warehouse.service.modules.report.dto.response.OrderReportResponse;
+import com.anhnht.warehouse.service.modules.report.dto.response.RevenueReportResponse;
 import com.anhnht.warehouse.service.modules.report.dto.response.ZoneOccupancyReportResponse;
 import com.anhnht.warehouse.service.modules.report.service.ReportService;
 import lombok.RequiredArgsConstructor;
@@ -65,5 +66,16 @@ public class ReportController {
     @GetMapping("/zone-occupancy")
     public ResponseEntity<ApiResponse<ZoneOccupancyReportResponse>> zoneOccupancy() {
         return ResponseEntity.ok(ApiResponse.success(reportService.getZoneOccupancyReport()));
+    }
+
+    /**
+     * GET /admin/reports/revenue?from=2026-01-01&to=2026-03-31
+     * Aggregated revenue from persisted storage invoices for a date range.
+     */
+    @GetMapping("/revenue")
+    public ResponseEntity<ApiResponse<RevenueReportResponse>> revenueReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return ResponseEntity.ok(ApiResponse.success(reportService.getRevenueReport(from, to)));
     }
 }

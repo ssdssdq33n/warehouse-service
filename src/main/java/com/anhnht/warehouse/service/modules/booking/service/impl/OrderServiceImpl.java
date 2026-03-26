@@ -6,6 +6,7 @@ import com.anhnht.warehouse.service.common.exception.ResourceNotFoundException;
 import com.anhnht.warehouse.service.modules.booking.dto.request.OrderCancelRequest;
 import com.anhnht.warehouse.service.modules.booking.dto.request.OrderRequest;
 import com.anhnht.warehouse.service.modules.booking.dto.request.OrderStatusUpdateRequest;
+import com.anhnht.warehouse.service.modules.booking.dto.request.OrderUpdateRequest;
 import com.anhnht.warehouse.service.modules.booking.entity.Order;
 import com.anhnht.warehouse.service.modules.booking.entity.OrderCancellation;
 import com.anhnht.warehouse.service.modules.booking.entity.OrderStatus;
@@ -86,6 +87,23 @@ public class OrderServiceImpl implements OrderService {
             }
         }
 
+        return orderRepository.save(order);
+    }
+
+    @Override
+    @Transactional
+    public Order update(Integer orderId, OrderUpdateRequest request) {
+        Order order = findById(orderId);
+        if (!STATUS_PENDING.equalsIgnoreCase(order.getStatus().getStatusName())) {
+            throw new BusinessException(ErrorCode.BOOKING_ALREADY_PROCESSED,
+                    "Only PENDING orders can be edited. Current status: "
+                    + order.getStatus().getStatusName());
+        }
+        order.setCustomerName(request.getCustomerName());
+        order.setPhone(request.getPhone());
+        order.setEmail(request.getEmail());
+        order.setAddress(request.getAddress());
+        order.setNote(request.getNote());
         return orderRepository.save(order);
     }
 

@@ -7,8 +7,12 @@ import com.anhnht.warehouse.service.common.util.SecurityUtils;
 import com.anhnht.warehouse.service.modules.user.dto.request.*;
 import com.anhnht.warehouse.service.modules.user.dto.response.*;
 import com.anhnht.warehouse.service.modules.user.facade.UserFacade;
+import com.anhnht.warehouse.service.modules.user.mapper.UserMapper;
+import com.anhnht.warehouse.service.modules.user.service.SystemLogService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -19,7 +23,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class UserController {
 
-    private final UserFacade userFacade;
+    private final UserFacade       userFacade;
+    private final SystemLogService systemLogService;
+    private final UserMapper       userMapper;
 
     // ============================================================
     // Own profile — any authenticated user
@@ -71,6 +77,15 @@ public class UserController {
             @PathVariable Integer addressId) {
         userFacade.deleteMyAddress(SecurityUtils.getCurrentUserId(), addressId);
         return ResponseEntity.ok(ApiResponse.noContent("Address deleted"));
+    }
+
+    @GetMapping("/users/me/activity-log")
+    public ResponseEntity<ApiResponse<PageResponse<SystemLogResponse>>> getMyActivityLog(
+            @PageableDefault(size = 20) Pageable pageable) {
+        Integer userId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success(
+                PageResponse.from(systemLogService.findByUserId(userId, pageable)
+                        .map(userMapper::toSystemLogResponse))));
     }
 
     // ============================================================
