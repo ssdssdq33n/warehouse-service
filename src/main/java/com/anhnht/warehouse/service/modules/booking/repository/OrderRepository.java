@@ -33,10 +33,14 @@ public interface OrderRepository extends JpaRepository<Order, Integer> {
     List<String> findContainerIdsInYardByCustomerId(@Param("customerId") Integer customerId);
 
     @EntityGraph(attributePaths = {"customer", "status", "containers"})
-    @Query("SELECT o FROM Order o WHERE " +
-           "(:statusName IS NULL OR o.status.statusName = :statusName) AND " +
-           "(:keyword IS NULL OR LOWER(o.customerName) LIKE LOWER(CONCAT('%',:keyword,'%')) " +
-           "OR LOWER(o.email) LIKE LOWER(CONCAT('%',:keyword,'%')))")
+    @Query(value = "SELECT DISTINCT o FROM Order o WHERE " +
+                   "(:statusName IS NULL OR o.status.statusName = :statusName) AND " +
+                   "(:keyword = '' OR LOWER(o.customerName) LIKE LOWER(CONCAT('%',:keyword,'%')) " +
+                   "OR LOWER(o.email) LIKE LOWER(CONCAT('%',:keyword,'%')))",
+           countQuery = "SELECT COUNT(o) FROM Order o WHERE " +
+                        "(:statusName IS NULL OR o.status.statusName = :statusName) AND " +
+                        "(:keyword = '' OR LOWER(o.customerName) LIKE LOWER(CONCAT('%',:keyword,'%')) " +
+                        "OR LOWER(o.email) LIKE LOWER(CONCAT('%',:keyword,'%')))")
     Page<Order> findAllFiltered(@Param("statusName") String statusName,
                                 @Param("keyword") String keyword,
                                 Pageable pageable);

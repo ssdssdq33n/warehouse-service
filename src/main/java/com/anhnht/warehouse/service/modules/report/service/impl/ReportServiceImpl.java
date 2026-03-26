@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -137,13 +138,18 @@ public class ReportServiceImpl implements ReportService {
         LocalDateTime fromDt = from.atStartOfDay();
         LocalDateTime toDt   = to.atTime(LocalTime.MAX);
 
-        Object[] totals  = invoiceRepository.aggregateByDateRange(fromDt, toDt);
-        Object[] overdue = invoiceRepository.aggregateOverdueByDateRange(fromDt, toDt);
+        List<Object[]> totalsList  = invoiceRepository.aggregateByDateRange(fromDt, toDt);
+        List<Object[]> overdueList = invoiceRepository.aggregateOverdueByDateRange(fromDt, toDt);
+
+        Object[] totals  = totalsList.isEmpty()  ? new Object[]{0L, BigDecimal.ZERO} : totalsList.get(0);
+        Object[] overdue = overdueList.isEmpty() ? new Object[]{0L, BigDecimal.ZERO} : overdueList.get(0);
 
         long       totalInvoices   = ((Number) totals[0]).longValue();
-        BigDecimal totalAmount     = (BigDecimal) totals[1];
+        BigDecimal totalAmount     = totals[1] instanceof BigDecimal bd ? bd
+                                         : BigDecimal.valueOf(((Number) totals[1]).doubleValue());
         long       overdueInvoices = ((Number) overdue[0]).longValue();
-        BigDecimal overdueAmount   = (BigDecimal) overdue[1];
+        BigDecimal overdueAmount   = overdue[1] instanceof BigDecimal bd ? bd
+                                         : BigDecimal.valueOf(((Number) overdue[1]).doubleValue());
 
         return RevenueReportResponse.builder()
                 .fromDate(from)
@@ -153,6 +159,63 @@ public class ReportServiceImpl implements ReportService {
                 .overdueInvoices(overdueInvoices)
                 .overdueAmount(overdueAmount)
                 .build();
+    }
+
+    @Override
+    public byte[] exportReportAsCsv(LocalDate from, LocalDate to) {
+        StringBuilder sb = new StringBuilder("\uFEFF"); // UTF-8 BOM for Excel compatibility
+
+        // Revenue
+        RevenueReportResponse revenue = getRevenueReport(from, to);
+        sb.append("=== BÁO CÁO DOANH THU ===\n");
+        sb.append("Kỳ báo cáo,").append(from).append(" đến ").append(to).append("\n");
+        sb.append("Tổng hóa đơn,").append(revenue.getTotalInvoices()).append("\n");
+        sb.append("Tổng doanh thu,").append(revenue.getTotalAmount()).append("\n");
+        sb.append("Hóa đơn quá hạn,").append(revenue.getOverdueInvoices()).append("\n");
+        sb.append("Giá trị quá hạn,").append(revenue.getOverdueAmount()).append("\n\n");
+
+        // Gate activity
+        GateActivityReportResponse gate = getGateActivityReport(from, to);
+        sb.append("=== HOẠT ĐỘNG GATE ===\n");
+        sb.append("Tổng gate vào,").append(gate.getTotalGateIn()).append("\n");
+        sb.append("Tổng gate ra,").append(gate.getTotalGateOut()).append("\n");
+        if (gate.getDaily() != null && !gate.getDaily().isEmpty()) {
+            sb.append("Ngày,Gate vào,Gate ra\n");
+            for (var d : gate.getDaily()) {
+                sb.append(d.getDate()).append(",").append(d.getGateIn()).append(",").append(d.getGateOut()).append("\n");
+            }
+        }
+        sb.append("\n");
+
+        // Container inventory
+        ContainerInventoryResponse inventory = getContainerInventoryReport();
+        sb.append("=== TỒN KHO CONTAINER ===\n");
+        sb.append("Tổng container,").append(inventory.getTotalContainers()).append("\n");
+        if (inventory.getByCargoType() != null && !inventory.getByCargoType().isEmpty()) {
+            sb.append("Loại hàng,Số lượng\n");
+            inventory.getByCargoType().forEach((name, count) ->
+                    sb.append(name).append(",").append(count).append("\n"));
+        }
+        sb.append("\n");
+
+        // Zone occupancy
+        ZoneOccupancyReportResponse occupancy = getZoneOccupancyReport();
+        sb.append("=== TỶ LỆ LẤP ĐẦY KHO ===\n");
+        sb.append("Tổng sức chứa,").append(occupancy.getTotalCapacity()).append("\n");
+        sb.append("Đang chiếm dụng,").append(occupancy.getTotalOccupied()).append("\n");
+        sb.append("Tỷ lệ lấp đầy,").append(String.format("%.1f%%", occupancy.getOverallOccupancyRate() * 100)).append("\n");
+        if (occupancy.getZones() != null && !occupancy.getZones().isEmpty()) {
+            sb.append("Khu vực,Bãi,Sức chứa,Đang dùng,Tỷ lệ\n");
+            for (var z : occupancy.getZones()) {
+                sb.append(z.getZoneName()).append(",")
+                        .append(z.getYardName()).append(",")
+                        .append(z.getCapacitySlots()).append(",")
+                        .append(z.getOccupiedSlots()).append(",")
+                        .append(String.format("%.1f%%", z.getOccupancyRate() * 100)).append("\n");
+            }
+        }
+
+        return sb.toString().getBytes(StandardCharsets.UTF_8);
     }
 
     // ── helpers ──────────────────────────────────────────────────────────────

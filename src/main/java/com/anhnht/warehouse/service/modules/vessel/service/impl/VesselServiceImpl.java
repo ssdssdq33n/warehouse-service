@@ -21,7 +21,8 @@ public class VesselServiceImpl implements VesselService {
 
     @Override
     public Page<Vessel> findAll(String keyword, Pageable pageable) {
-        return vesselRepository.search(keyword, pageable);
+        String kw = (keyword == null || keyword.isBlank()) ? "" : keyword.trim();
+        return vesselRepository.search(kw, pageable);
     }
 
     @Override

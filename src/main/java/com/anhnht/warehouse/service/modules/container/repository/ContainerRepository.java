@@ -28,8 +28,10 @@ public interface ContainerRepository extends JpaRepository<Container, String> {
 
 
     @EntityGraph(attributePaths = {"containerType", "status", "cargoType", "attribute", "manifest"})
-    @Query("SELECT c FROM Container c WHERE " +
-           "(:keyword IS NULL OR LOWER(c.containerId) LIKE LOWER(CONCAT('%',:keyword,'%')))")
+    @Query(value = "SELECT c FROM Container c WHERE " +
+                   "(:keyword = '' OR LOWER(c.containerId) LIKE LOWER(CONCAT('%',:keyword,'%')))",
+           countQuery = "SELECT COUNT(c) FROM Container c WHERE " +
+                        "(:keyword = '' OR LOWER(c.containerId) LIKE LOWER(CONCAT('%',:keyword,'%')))")
     Page<Container> search(@Param("keyword") String keyword, Pageable pageable);
 
     @EntityGraph(attributePaths = {"containerType", "status", "cargoType", "attribute", "manifest"})

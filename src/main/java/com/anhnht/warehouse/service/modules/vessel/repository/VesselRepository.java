@@ -9,8 +9,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface VesselRepository extends JpaRepository<Vessel, Integer> {
 
-    @Query("SELECT v FROM Vessel v WHERE " +
-           "(:keyword IS NULL OR LOWER(v.vesselName) LIKE LOWER(CONCAT('%',:keyword,'%')) " +
-           "OR LOWER(v.shippingLine) LIKE LOWER(CONCAT('%',:keyword,'%')))")
+    @Query(value = "SELECT v FROM Vessel v WHERE " +
+                   "(:keyword = '' OR LOWER(v.vesselName) LIKE LOWER(CONCAT('%',:keyword,'%')) " +
+                   "OR LOWER(v.shippingLine) LIKE LOWER(CONCAT('%',:keyword,'%')))",
+           countQuery = "SELECT COUNT(v) FROM Vessel v WHERE " +
+                        "(:keyword = '' OR LOWER(v.vesselName) LIKE LOWER(CONCAT('%',:keyword,'%')) " +
+                        "OR LOWER(v.shippingLine) LIKE LOWER(CONCAT('%',:keyword,'%')))")
     Page<Vessel> search(@Param("keyword") String keyword, Pageable pageable);
 }

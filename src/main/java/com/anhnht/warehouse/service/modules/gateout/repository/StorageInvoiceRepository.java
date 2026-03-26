@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 public interface StorageInvoiceRepository extends JpaRepository<StorageInvoice, Integer> {
@@ -19,11 +20,11 @@ public interface StorageInvoiceRepository extends JpaRepository<StorageInvoice, 
 
     @Query("SELECT COUNT(i), COALESCE(SUM(i.totalFee), 0) " +
            "FROM StorageInvoice i WHERE i.createdAt BETWEEN :from AND :to")
-    Object[] aggregateByDateRange(@Param("from") LocalDateTime from,
-                                  @Param("to")   LocalDateTime to);
+    List<Object[]> aggregateByDateRange(@Param("from") LocalDateTime from,
+                                        @Param("to")   LocalDateTime to);
 
     @Query("SELECT COUNT(i), COALESCE(SUM(i.overduePenalty), 0) " +
            "FROM StorageInvoice i WHERE i.isOverdue = true AND i.createdAt BETWEEN :from AND :to")
-    Object[] aggregateOverdueByDateRange(@Param("from") LocalDateTime from,
-                                         @Param("to")   LocalDateTime to);
+    List<Object[]> aggregateOverdueByDateRange(@Param("from") LocalDateTime from,
+                                               @Param("to")   LocalDateTime to);
 }

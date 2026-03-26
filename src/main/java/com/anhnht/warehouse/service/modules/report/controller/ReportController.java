@@ -9,6 +9,8 @@ import com.anhnht.warehouse.service.modules.report.dto.response.ZoneOccupancyRep
 import com.anhnht.warehouse.service.modules.report.service.ReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -77,5 +79,24 @@ public class ReportController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return ResponseEntity.ok(ApiResponse.success(reportService.getRevenueReport(from, to)));
+    }
+
+    /**
+     * GET /admin/reports/export?from=2026-01-01&to=2026-12-31
+     * Downloads a CSV file containing all report sections for the given period.
+     */
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> exportReport(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+
+        byte[] csv = reportService.exportReportAsCsv(from, to);
+        String filename = "bao-cao-" + from + "-den-" + to + ".csv";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentLength(csv.length)
+                .body(csv);
     }
 }

@@ -19,4 +19,6 @@ public interface ReportService {
     ZoneOccupancyReportResponse getZoneOccupancyReport();
 
     RevenueReportResponse getRevenueReport(LocalDate from, LocalDate to);
+
+    byte[] exportReportAsCsv(LocalDate from, LocalDate to);
 }

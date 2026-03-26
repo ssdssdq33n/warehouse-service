@@ -23,6 +23,8 @@ public interface UserRepository extends JpaRepository<User, Integer> {
     boolean existsByEmail(String email);
 
     @EntityGraph(attributePaths = {"roles"})
+    @Query(value = "SELECT u FROM User u",
+           countQuery = "SELECT COUNT(u) FROM User u")
     Page<User> findAll(Pageable pageable);
 
     @EntityGraph(attributePaths = {"roles"})

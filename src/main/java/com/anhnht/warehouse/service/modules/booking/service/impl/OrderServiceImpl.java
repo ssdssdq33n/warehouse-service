@@ -42,7 +42,8 @@ public class OrderServiceImpl implements OrderService {
 
     @Override
     public Page<Order> findAll(String statusName, String keyword, Pageable pageable) {
-        return orderRepository.findAllFiltered(statusName, keyword, pageable);
+        String kw = (keyword == null || keyword.isBlank()) ? "" : keyword.trim();
+        return orderRepository.findAllFiltered(statusName, kw, pageable);
     }
 
     @Override

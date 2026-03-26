@@ -34,7 +34,8 @@ public class ContainerServiceImpl implements ContainerService {
 
     @Override
     public Page<Container> findAll(String keyword, Pageable pageable) {
-        return containerRepository.search(keyword, pageable);
+        String kw = (keyword == null || keyword.isBlank()) ? "" : keyword.trim();
+        return containerRepository.search(kw, pageable);
     }
 
     @Override

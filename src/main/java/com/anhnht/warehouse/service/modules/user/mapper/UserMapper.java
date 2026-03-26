@@ -13,8 +13,9 @@ public interface UserMapper {
 
     UserResponse toUserResponse(User user);
 
-    @Mapping(target = "profile",   source = "profile")
-    @Mapping(target = "addresses", source = "addresses")
+    // profile and addresses are lazy — they are set explicitly by the facade after mapping
+    @Mapping(target = "profile",   ignore = true)
+    @Mapping(target = "addresses", ignore = true)
     UserDetailResponse toUserDetailResponse(User user);
 
     RoleResponse toRoleResponse(Role role);
