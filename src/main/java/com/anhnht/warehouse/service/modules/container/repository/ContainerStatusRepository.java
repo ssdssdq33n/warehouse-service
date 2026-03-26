@@ -7,4 +7,5 @@ import java.util.Optional;
 
 public interface ContainerStatusRepository extends JpaRepository<ContainerStatus, Integer> {
     Optional<ContainerStatus> findByStatusNameIgnoreCase(String statusName);
+    Optional<ContainerStatus> findByStatusName(String name);
 }
