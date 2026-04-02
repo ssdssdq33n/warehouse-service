@@ -32,4 +32,12 @@ public interface UserRepository extends JpaRepository<User, Integer> {
 
     @Query("SELECT u FROM User u JOIN u.roles r WHERE r.roleName = :roleName")
     Page<User> findAllByRoleName(@Param("roleName") String roleName, Pageable pageable);
+
+    @EntityGraph(attributePaths = {"roles"})
+    @Query("SELECT u FROM User u JOIN u.roles r WHERE r.roleName = :roleName AND " +
+           "(:keyword = '' OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(u.username) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<User> findByRoleNameAndKeyword(@Param("roleName") String roleName,
+                                        @Param("keyword") String keyword,
+                                        Pageable pageable);
 }

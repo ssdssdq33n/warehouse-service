@@ -120,6 +120,53 @@ public class ChatServiceImpl implements ChatService {
         return messageRepository.findByRoomId(roomId, pageable);
     }
 
+    @Override
+    public Page<User> searchUsers(String roleName, String keyword, Pageable pageable) {
+        String kw = (keyword == null || keyword.isBlank()) ? "" : keyword.trim();
+        return userRepository.findByRoleNameAndKeyword(roleName, kw, pageable);
+    }
+
+    @Override
+    @Transactional
+    public ChatRoom findOrCreateDirectRoom(Integer userId1, Integer userId2) {
+        List<ChatRoom> existing = chatRoomRepository.findRoomsWithBothMembers(userId1, userId2);
+        if (!existing.isEmpty()) {
+            return existing.get(0);
+        }
+
+        // Look up or create SUPPORT type
+        ChatRoomType type = chatRoomTypeRepository.findByTypeNameIgnoreCase("SUPPORT")
+                .orElseGet(() -> {
+                    ChatRoomType t = new ChatRoomType();
+                    t.setTypeName("SUPPORT");
+                    return chatRoomTypeRepository.save(t);
+                });
+
+        User u1 = findUser(userId1);
+        User u2 = findUser(userId2);
+
+        ChatRoom room = new ChatRoom();
+        room.setRoomName("Chat: " + u1.getFullName() + " & " + u2.getFullName());
+        room.setType(type);
+        ChatRoom saved = chatRoomRepository.save(room);
+
+        ChatRoomMember m1 = new ChatRoomMember();
+        m1.setId(new ChatRoomMemberId(saved.getRoomId(), userId1));
+        m1.setRoom(saved);
+        m1.setUser(u1);
+        m1.setRole("owner");
+        chatRoomMemberRepository.save(m1);
+
+        ChatRoomMember m2 = new ChatRoomMember();
+        m2.setId(new ChatRoomMemberId(saved.getRoomId(), userId2));
+        m2.setRoom(saved);
+        m2.setUser(u2);
+        m2.setRole("member");
+        chatRoomMemberRepository.save(m2);
+
+        return saved;
+    }
+
     // ── helpers ──────────────────────────────────────────────────────────────
 
     private ChatRoom findRoom(Integer roomId) {

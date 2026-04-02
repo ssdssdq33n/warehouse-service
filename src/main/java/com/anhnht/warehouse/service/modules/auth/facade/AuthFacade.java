@@ -26,7 +26,7 @@ public class AuthFacade {
     private final SystemLogService  systemLogService;
 
     public LoginResponse login(LoginRequest request) {
-        User user = authService.validateCredentials(request.getUsername(), request.getPassword());
+        User user = authService.validateCredentials(request.getEmail(), request.getPassword());
         String role  = resolvePrimaryRole(user);
         String token = jwtTokenProvider.generateToken(user.getUsername(), user.getUserId(), role);
 
@@ -80,6 +80,7 @@ public class AuthFacade {
                 .map(Role::getRoleName)
                 .toList();
         if (roleNames.contains(RoleCode.ADMIN))    return RoleCode.ADMIN;
+        if (roleNames.contains(RoleCode.PLANNER))  return RoleCode.PLANNER;
         if (roleNames.contains(RoleCode.OPERATOR)) return RoleCode.OPERATOR;
         return RoleCode.CUSTOMER;
     }

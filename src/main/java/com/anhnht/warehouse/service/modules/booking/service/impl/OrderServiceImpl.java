@@ -16,14 +16,17 @@ import com.anhnht.warehouse.service.modules.booking.repository.OrderStatusReposi
 import com.anhnht.warehouse.service.modules.booking.service.OrderService;
 import com.anhnht.warehouse.service.modules.container.entity.Container;
 import com.anhnht.warehouse.service.modules.container.repository.ContainerRepository;
+import com.anhnht.warehouse.service.modules.alert.service.NotificationService;
 import com.anhnht.warehouse.service.modules.user.entity.User;
 import com.anhnht.warehouse.service.modules.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -39,6 +42,7 @@ public class OrderServiceImpl implements OrderService {
     private final OrderCancellationRepository cancellationRepository;
     private final ContainerRepository        containerRepository;
     private final UserRepository             userRepository;
+    private final NotificationService        notificationService;
 
     @Override
     public Page<Order> findAll(String statusName, String keyword, Pageable pageable) {
@@ -173,7 +177,18 @@ public class OrderServiceImpl implements OrderService {
                     "Only PENDING orders can be approved. Current status: " + current);
         }
         order.setStatus(resolveStatus(STATUS_APPROVED));
-        return orderRepository.save(order);
+        orderRepository.save(order);
+        if (order.getCustomer() != null) {
+            log.info("[Notification] Sending approval notification for order #{} to userId={}",
+                    orderId, order.getCustomer().getUserId());
+            notificationService.notify(
+                    "Đơn hàng #" + orderId + " đã được duyệt",
+                    "Đơn hàng của bạn đã được xem xét và chấp thuận.",
+                    order.getCustomer().getUserId());
+        } else {
+            log.warn("[Notification] Order #{} has no customer — notification skipped", orderId);
+        }
+        return order;
     }
 
     @Override
@@ -194,6 +209,18 @@ public class OrderServiceImpl implements OrderService {
             record.setOrder(order);
             record.setReason(reason);
             cancellationRepository.save(record);
+        }
+
+        if (order.getCustomer() != null) {
+            log.info("[Notification] Sending rejection notification for order #{} to userId={}",
+                    orderId, order.getCustomer().getUserId());
+            String reasonText = (reason != null && !reason.isBlank()) ? " Lý do: " + reason : "";
+            notificationService.notify(
+                    "Đơn hàng #" + orderId + " bị từ chối",
+                    "Đơn hàng của bạn đã bị từ chối." + reasonText,
+                    order.getCustomer().getUserId());
+        } else {
+            log.warn("[Notification] Order #{} has no customer — notification skipped", orderId);
         }
 
         return order;

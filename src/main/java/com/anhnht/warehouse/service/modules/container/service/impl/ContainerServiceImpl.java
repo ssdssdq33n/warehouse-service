@@ -33,9 +33,15 @@ public class ContainerServiceImpl implements ContainerService {
     private final CargoAttributeRepository         cargoAttributeRepository;
 
     @Override
-    public Page<Container> findAll(String keyword, Pageable pageable) {
-        String kw = (keyword == null || keyword.isBlank()) ? "" : keyword.trim();
-        return containerRepository.search(kw, pageable);
+    public Page<Container> findAll(String keyword, String statusName, Pageable pageable) {
+        String kw = (keyword   == null || keyword.isBlank())   ? "" : keyword.trim();
+        String sn = (statusName == null || statusName.isBlank()) ? "" : statusName.trim();
+        return containerRepository.search(kw, sn, pageable);
+    }
+
+    @Override
+    public Page<Container> findByCustomer(Integer customerId, Pageable pageable) {
+        return containerRepository.findByCustomerUserId(customerId, pageable);
     }
 
     @Override
@@ -79,6 +85,13 @@ public class ContainerServiceImpl implements ContainerService {
         container.setNote(request.getNote());
         applyLookups(container, request);
         return containerRepository.save(container);
+    }
+
+    @Override
+    @Transactional
+    public void delete(String containerId) {
+        Container container = findById(containerId);
+        containerRepository.delete(container);
     }
 
     @Override

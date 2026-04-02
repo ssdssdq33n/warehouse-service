@@ -1,6 +1,7 @@
 package com.anhnht.warehouse.service.common.security.jwt;
 
 import com.anhnht.warehouse.service.common.security.CustomUserDetails;
+import com.anhnht.warehouse.service.infrastructure.redis.RedisCacheService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,7 +29,8 @@ import java.util.List;
 @Slf4j
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtTokenProvider jwtTokenProvider;
+    private final JwtTokenProvider  jwtTokenProvider;
+    private final RedisCacheService redisCacheService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -36,7 +38,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String token = extractToken(request);
 
-        if (token != null && jwtTokenProvider.validateToken(token)) {
+        if (token != null && jwtTokenProvider.validateToken(token)
+                && !redisCacheService.isTokenBlacklisted(token)) {
             String  username = jwtTokenProvider.getUsernameFromToken(token);
             Integer userId   = jwtTokenProvider.getUserIdFromToken(token);
             String  role     = jwtTokenProvider.getRoleFromToken(token);

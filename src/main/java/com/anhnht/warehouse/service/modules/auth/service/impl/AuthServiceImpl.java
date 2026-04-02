@@ -27,8 +27,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional(readOnly = true)
-    public User validateCredentials(String username, String password) {
-        User user = userRepository.findByUsername(username)
+    public User validateCredentials(String email, String password) {
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UnauthorizedException(ErrorCode.INVALID_CREDENTIALS));
 
         if (!passwordEncoder.matches(password, user.getPassword())) {

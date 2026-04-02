@@ -29,12 +29,22 @@ public interface ContainerRepository extends JpaRepository<Container, String> {
 
     @EntityGraph(attributePaths = {"containerType", "status", "cargoType", "attribute", "manifest"})
     @Query(value = "SELECT c FROM Container c WHERE " +
-                   "(:keyword = '' OR LOWER(c.containerId) LIKE LOWER(CONCAT('%',:keyword,'%')))",
+                   "(:keyword = '' OR LOWER(c.containerId) LIKE LOWER(CONCAT('%',:keyword,'%'))) AND " +
+                   "(:statusName = '' OR c.status.statusName = :statusName)",
            countQuery = "SELECT COUNT(c) FROM Container c WHERE " +
-                        "(:keyword = '' OR LOWER(c.containerId) LIKE LOWER(CONCAT('%',:keyword,'%')))")
-    Page<Container> search(@Param("keyword") String keyword, Pageable pageable);
+                        "(:keyword = '' OR LOWER(c.containerId) LIKE LOWER(CONCAT('%',:keyword,'%'))) AND " +
+                        "(:statusName = '' OR c.status.statusName = :statusName)")
+    Page<Container> search(@Param("keyword") String keyword, @Param("statusName") String statusName, Pageable pageable);
 
     @EntityGraph(attributePaths = {"containerType", "status", "cargoType", "attribute", "manifest"})
     @Query("SELECT c FROM Container c WHERE c.containerId = :id")
     java.util.Optional<Container> findByIdWithDetails(@Param("id") String id);
+
+    /** Customer: find containers linked to the given customer's orders. */
+    @EntityGraph(attributePaths = {"containerType", "status", "cargoType", "attribute"})
+    @Query(value = "SELECT DISTINCT c FROM Container c WHERE c.containerId IN " +
+                   "(SELECT c2.containerId FROM Order o JOIN o.containers c2 WHERE o.customer.userId = :customerId)",
+           countQuery = "SELECT COUNT(DISTINCT c) FROM Container c WHERE c.containerId IN " +
+                        "(SELECT c2.containerId FROM Order o JOIN o.containers c2 WHERE o.customer.userId = :customerId)")
+    Page<Container> findByCustomerUserId(@Param("customerId") Integer customerId, Pageable pageable);
 }

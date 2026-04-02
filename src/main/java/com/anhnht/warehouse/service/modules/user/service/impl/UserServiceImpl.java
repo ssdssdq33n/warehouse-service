@@ -69,7 +69,12 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public User createCustomer(RegisterRequest request) {
-        if (userRepository.existsByUsername(request.getUsername())) {
+        // Auto-generate username from email prefix if not provided
+        String username = StringUtils.hasText(request.getUsername())
+                ? request.getUsername()
+                : resolveUniqueUsername(request.getEmail().split("@")[0]);
+
+        if (userRepository.existsByUsername(username)) {
             throw new BusinessException(ErrorCode.USERNAME_ALREADY_EXISTS);
         }
         if (userRepository.existsByEmail(request.getEmail())) {
@@ -77,7 +82,7 @@ public class UserServiceImpl implements UserService {
         }
 
         User user = new User();
-        user.setUsername(request.getUsername());
+        user.setUsername(username);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setFullName(request.getFullName());
         user.setEmail(request.getEmail());
@@ -249,6 +254,19 @@ public class UserServiceImpl implements UserService {
     }
 
     // ---- Private helpers ----
+
+    private String resolveUniqueUsername(String base) {
+        // Sanitise: keep alphanumeric + underscore, max 40 chars
+        String clean = base.replaceAll("[^a-zA-Z0-9_]", "_");
+        if (clean.length() > 40) clean = clean.substring(0, 40);
+        if (!userRepository.existsByUsername(clean)) return clean;
+        // Append incrementing suffix until unique
+        for (int i = 2; i <= 9999; i++) {
+            String candidate = clean + "_" + i;
+            if (!userRepository.existsByUsername(candidate)) return candidate;
+        }
+        return clean + "_" + System.currentTimeMillis();
+    }
 
     private void clearDefaultAddresses(Integer userId) {
         addressRepository.findAllByUserUserIdAndIsDefault(userId, true)

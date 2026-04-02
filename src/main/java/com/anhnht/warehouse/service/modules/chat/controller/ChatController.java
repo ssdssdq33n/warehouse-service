@@ -3,10 +3,12 @@ package com.anhnht.warehouse.service.modules.chat.controller;
 import com.anhnht.warehouse.service.common.dto.response.ApiResponse;
 import com.anhnht.warehouse.service.common.dto.response.PageResponse;
 import com.anhnht.warehouse.service.common.util.SecurityUtils;
+import com.anhnht.warehouse.service.modules.chat.dto.request.CreateDirectRoomRequest;
 import com.anhnht.warehouse.service.modules.chat.dto.request.CreateRoomRequest;
 import com.anhnht.warehouse.service.modules.chat.dto.request.SendMessageRequest;
 import com.anhnht.warehouse.service.modules.chat.dto.response.ChatRoomResponse;
 import com.anhnht.warehouse.service.modules.chat.dto.response.ChatRoomTypeResponse;
+import com.anhnht.warehouse.service.modules.chat.dto.response.ChatUserResponse;
 import com.anhnht.warehouse.service.modules.chat.dto.response.MessageResponse;
 import com.anhnht.warehouse.service.modules.chat.mapper.ChatMapper;
 import com.anhnht.warehouse.service.modules.chat.service.ChatService;
@@ -107,6 +109,33 @@ public class ChatController {
         return ResponseEntity.ok(ApiResponse.success(
                 PageResponse.from(chatService.getMessages(roomId, userId, pageable)
                         .map(chatMapper::toMessageResponse))));
+    }
+
+    /**
+     * GET /chat/users?roleName=CUSTOMER&keyword=Lan
+     * Search users by role and optional name keyword (for starting conversations).
+     */
+    @GetMapping("/chat/users")
+    public ResponseEntity<ApiResponse<PageResponse<ChatUserResponse>>> searchUsers(
+            @RequestParam String roleName,
+            @RequestParam(required = false, defaultValue = "") String keyword,
+            @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(ApiResponse.success(
+                PageResponse.from(chatService.searchUsers(roleName, keyword, pageable)
+                        .map(chatMapper::toChatUserResponse))));
+    }
+
+    /**
+     * POST /chat/conversations
+     * Find or create a direct 1-1 conversation between current user and target.
+     */
+    @PostMapping("/chat/conversations")
+    public ResponseEntity<ApiResponse<ChatRoomResponse>> findOrCreateConversation(
+            @Valid @RequestBody CreateDirectRoomRequest request) {
+        Integer currentUserId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success(
+                chatMapper.toChatRoomResponse(
+                        chatService.findOrCreateDirectRoom(currentUserId, request.getTargetUserId()))));
     }
 
     /**

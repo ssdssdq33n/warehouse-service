@@ -76,9 +76,9 @@ public class PreFilterModule {
             if (occupied >= slot.getMaxTier()) continue;
 
             // Hard constraint 2: weight — total stack weight must not exceed MAX
-            // Simplified: if newGrossWeight > MAX_STACK_WEIGHT_TONS, reject entirely
+            // newGrossWeight is in kg; MAX_STACK_WEIGHT_TONS is in tonnes → convert before comparing
             if (newGrossWeight != null &&
-                newGrossWeight.doubleValue() > AppConstant.MAX_STACK_WEIGHT_TONS) {
+                newGrossWeight.doubleValue() / 1000.0 > AppConstant.MAX_STACK_WEIGHT_TONS) {
                 throw new BusinessException(ErrorCode.BAD_REQUEST,
                         "Container gross weight exceeds maximum stack weight: " + newGrossWeight);
             }

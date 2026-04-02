@@ -4,8 +4,8 @@ import com.anhnht.warehouse.service.modules.user.entity.User;
 
 public interface AuthService {
 
-    /** Validates credentials and returns the authenticated user. Throws on failure. */
-    User validateCredentials(String username, String password);
+    /** Validates credentials by email and returns the authenticated user. Throws on failure. */
+    User validateCredentials(String email, String password);
 
     /** Generates and stores an OTP for the given email, then sends it via email. */
     void sendPasswordResetOtp(String email);

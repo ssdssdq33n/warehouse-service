@@ -1,5 +1,6 @@
 package com.anhnht.warehouse.service.modules.auth.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -10,7 +11,6 @@ import lombok.Setter;
 @Setter
 public class RegisterRequest {
 
-    @NotBlank(message = "Username is required")
     @Size(min = 3, max = 50, message = "Username must be 3–50 characters")
     private String username;
 
@@ -18,7 +18,8 @@ public class RegisterRequest {
     @Size(min = 8, message = "Password must be at least 8 characters")
     private String password;
 
-    @NotBlank(message = "Full name is required")
+    // Accept both "fullName" (internal) and "name" (frontend)
+    @JsonAlias({"fullName", "name"})
     @Size(max = 100, message = "Full name must not exceed 100 characters")
     private String fullName;
 

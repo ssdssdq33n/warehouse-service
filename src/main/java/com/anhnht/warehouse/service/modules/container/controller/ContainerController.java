@@ -3,6 +3,7 @@ package com.anhnht.warehouse.service.modules.container.controller;
 import com.anhnht.warehouse.service.common.dto.response.ApiResponse;
 import com.anhnht.warehouse.service.common.dto.response.PageResponse;
 import com.anhnht.warehouse.service.common.util.PageableUtils;
+import com.anhnht.warehouse.service.common.util.SecurityUtils;
 import com.anhnht.warehouse.service.modules.container.dto.request.ContainerRequest;
 import com.anhnht.warehouse.service.modules.container.dto.request.ExportPriorityRequest;
 import com.anhnht.warehouse.service.modules.container.dto.response.ContainerResponse;
@@ -31,6 +32,7 @@ public class ContainerController {
     @PreAuthorize("hasAnyRole('ADMIN','OPERATOR')")
     public ResponseEntity<ApiResponse<PageResponse<ContainerResponse>>> getContainers(
             @RequestParam(required = false)               String keyword,
+            @RequestParam(required = false)               String statusName,
             @RequestParam(defaultValue = "0")             int page,
             @RequestParam(defaultValue = "20")            int size,
             @RequestParam(defaultValue = "containerId")   String sortBy,
@@ -38,7 +40,7 @@ public class ContainerController {
 
         Pageable pageable = PageableUtils.of(page, size, sortBy, direction);
         return ResponseEntity.ok(ApiResponse.success(
-                PageResponse.of(containerService.findAll(keyword, pageable)
+                PageResponse.of(containerService.findAll(keyword, statusName, pageable)
                         .map(containerMapper::toContainerResponse))));
     }
 
@@ -50,7 +52,7 @@ public class ContainerController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAnyRole('ADMIN','OPERATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATOR','CUSTOMER')")
     public ResponseEntity<ApiResponse<ContainerResponse>> createContainer(
             @Valid @RequestBody ContainerRequest request) {
         return ResponseEntity.status(201).body(ApiResponse.created(
@@ -88,5 +90,27 @@ public class ContainerController {
     public ResponseEntity<ApiResponse<ExportPriorityResponse>> getExportPriority(@PathVariable String id) {
         return ResponseEntity.ok(ApiResponse.success(
                 containerMapper.toExportPriorityResponse(containerService.getExportPriority(id))));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<Void>> deleteContainer(@PathVariable String id) {
+        containerService.delete(id);
+        return ResponseEntity.ok(ApiResponse.success(null));
+    }
+
+    @GetMapping("/my")
+    @PreAuthorize("hasAnyRole('CUSTOMER','ADMIN','OPERATOR')")
+    public ResponseEntity<ApiResponse<PageResponse<ContainerResponse>>> getMyContainers(
+            @RequestParam(defaultValue = "0")           int page,
+            @RequestParam(defaultValue = "20")          int size,
+            @RequestParam(defaultValue = "containerId") String sortBy,
+            @RequestParam(defaultValue = "asc")         String direction) {
+
+        Pageable pageable = PageableUtils.of(page, size, sortBy, direction);
+        Integer customerId = SecurityUtils.getCurrentUserId();
+        return ResponseEntity.ok(ApiResponse.success(
+                PageResponse.of(containerService.findByCustomer(customerId, pageable)
+                        .map(containerMapper::toContainerResponse))));
     }
 }

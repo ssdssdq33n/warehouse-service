@@ -26,7 +26,7 @@ public class ContainerCatalogController {
     // ============================================================
 
     @GetMapping("/container-types")
-    @PreAuthorize("hasAnyRole('ADMIN','OPERATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATOR','CUSTOMER')")
     public ResponseEntity<ApiResponse<List<ContainerTypeResponse>>> getContainerTypes() {
         return ResponseEntity.ok(ApiResponse.success(
                 catalogMapper.toContainerTypeResponses(catalogService.getAllContainerTypes())));
@@ -63,7 +63,7 @@ public class ContainerCatalogController {
     // ============================================================
 
     @GetMapping("/cargo-types")
-    @PreAuthorize("hasAnyRole('ADMIN','OPERATOR')")
+    @PreAuthorize("hasAnyRole('ADMIN','OPERATOR','CUSTOMER')")
     public ResponseEntity<ApiResponse<List<CargoTypeResponse>>> getCargoTypes() {
         return ResponseEntity.ok(ApiResponse.success(
                 catalogMapper.toCargoTypeResponses(catalogService.getAllCargoTypes())));

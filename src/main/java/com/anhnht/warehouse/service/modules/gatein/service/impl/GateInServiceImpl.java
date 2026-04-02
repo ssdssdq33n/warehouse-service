@@ -111,7 +111,7 @@ public class GateInServiceImpl implements GateInService {
     public ContainerPosition assignPosition(String containerId, ContainerPositionRequest request) {
         Container container = containerService.findById(containerId);
 
-        Slot slot = slotRepository.findById(request.getSlotId())
+        Slot slot = slotRepository.findByIdWithDetails(request.getSlotId())
                 .orElseThrow(() -> new ResourceNotFoundException(ErrorCode.SLOT_NOT_FOUND,
                         "Slot not found: " + request.getSlotId()));
 

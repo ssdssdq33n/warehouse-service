@@ -17,6 +17,10 @@ public interface SlotRepository extends JpaRepository<Slot, Integer> {
     @EntityGraph(attributePaths = {"block"})
     Optional<Slot> findById(Integer slotId);
 
+    /** Used by gate-in assignPosition: loads full chain slot → block → zone so mapper never hits a closed session. */
+    @Query("SELECT s FROM Slot s JOIN FETCH s.block b JOIN FETCH b.zone WHERE s.slotId = :slotId")
+    Optional<Slot> findByIdWithDetails(@Param("slotId") Integer slotId);
+
     boolean existsByBlockBlockIdAndRowNoAndBayNo(Integer blockId, Integer rowNo, Integer bayNo);
 
     /** Used by algorithm: all slots in a zone, eagerly loaded */
